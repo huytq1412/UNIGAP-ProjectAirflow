@@ -1,0 +1,19 @@
+# Virtual Environment
+.venv/
+.env
+
+# PyCharm specific settings
+.idea/
+
+# VSCode specific settings
+.vscode/
+
+# Python cache
+__pycache__/
+
+# Airflow
+logs/
+airflow.cfg
+airflow.db
+airflow-webserver.pid
+webserver_config.py

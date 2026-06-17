@@ -1,0 +1,29 @@
+[project]
+name = "projectairflow"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "huytq1412",email = "huytrinhquang1412@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "apache-airflow==2.10.4",
+    "apache-airflow-providers-postgres",
+    "apache-airflow-providers-docker",
+    "apache-airflow-providers-apache-kafka",
+    "apache-airflow-providers-apache-spark==5.2.1",
+    "pandas",
+    "elasticsearch",
+    "pyspark==3.5.1",
+    "psycopg[binary]",
+    "confluent-kafka",
+    "requests"
+]
+
+[tool.poetry]
+packages = [{include = "projectairflow", from = "src"}]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
