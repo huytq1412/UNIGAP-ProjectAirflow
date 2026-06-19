@@ -104,6 +104,10 @@ Hệ thống được thiết kế linh hoạt, đọc cấu hình trực tiếp
 
   * telegram_chat_id: ID của Group/User nhận cảnh báo.
 
+  * yarn_resourcemanager_url: Url  của YARN ResourceManager
+
+  * yarn_nodes_number: Số worker nodes của cụm YARN
+
 * Tạo Connections (Admin -> Connections):
 
   * kafka_local:
