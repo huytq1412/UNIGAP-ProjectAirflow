@@ -31,8 +31,12 @@ class YarnHealthCheckOperator(BaseOperator):
         worker_nodes = cluster_metrics.get('activeNodes', 0)
         # Số CPU cores còn trống
         available_cores = cluster_metrics.get('availableVirtualCores', 0)
+        # Tổng số CPU Cores
+        total_cores = cluster_metrics.get('totalVirtualCores', 1)
         # Số RAM còn khả dụng
         available_memory = cluster_metrics.get('availableMB', 0)
+        # Tổng số RAM
+        total_memory = cluster_metrics.get('totalMB', 1)
 
         self.log.info("YARN Cluster Metrics:")
         self.log.info(f" ➔ Active Worker Nodes: {worker_nodes} / {self.nodes_number}")
@@ -43,11 +47,16 @@ class YarnHealthCheckOperator(BaseOperator):
             raise ValueError(
                 f"CẢNH BÁO: Số NodeManager hoạt động ({worker_nodes}) ít hơn dự kiến ({self.nodes_number}). Hãy kiểm tra lại hệ thống")
 
-        if available_cores == 0:
-            raise ValueError(f"CẢNH BÁO: Hết sạch CPU Core khả dụng. Hãy kiểm tra lại hệ thống")
+        # Tính tỷ lệ % còn trống
+        core_free_percent = (available_cores / total_cores) * 100
+        memory_free_percent = (available_memory / total_memory) * 100
 
-        if available_cores == 0:
-            raise ValueError(f"CẢNH BÁO: Hết sạch RAM khả dụng. Hãy kiểm tra lại hệ thống")
+        # Báo động nếu tài nguyên trống dưới 10%
+        if core_free_percent <= 10.0:
+            raise ValueError(f"CẢNH BÁO: CPU Core chỉ còn {core_free_percent:.1f}% khả dụng. Hãy kiểm tra lại hệ thống")
+
+        if memory_free_percent <= 10.0:
+            raise ValueError(f"CẢNH BÁO: RAM chỉ còn {memory_free_percent:.1f}% khả dụng. Hãy kiểm tra lại hệ thống")
 
         self.log.info("Cụm YARN/Spark vẫn đang hoạt động ổn định.")
 

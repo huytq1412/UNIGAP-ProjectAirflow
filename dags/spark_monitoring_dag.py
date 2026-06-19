@@ -1,8 +1,8 @@
 from airflow import DAG
 from datetime import datetime, timedelta
+from airflow.models import Variable
 from operators.spark_operators import YarnHealthCheckOperator, PostgresDataOutputCheckOperator
 from utils.telegram_alert import send_telegram_error_alert, send_telegram_success_alert
-
 
 default_args = {
     'owner': 'huytq',
@@ -24,8 +24,8 @@ with DAG(
     # Task 1: Kiểm tra cụm YARN/Spark
     check_yarn_cluster = YarnHealthCheckOperator(
         task_id='check_yarn_health',
-        resourcemanager_url='http://resourcemanager:8088',
-        nodes_number=2 # Hiện tại môi trường setup có 2 worker nodes
+        resourcemanager_url=Variable.get("yarn_resourcemanager_url"),
+        nodes_number=int(Variable.get("yarn_nodes_number", default_var=2))
     )
 
     # Task 2: Kiểm tra toàn diện Dim & Fact
@@ -33,13 +33,37 @@ with DAG(
         task_id='verify_postgres_data',
         postgres_conn_id='postgres_local',
         sql_queries={
-            # Các bảng Dim: Chỉ kiểm tra xem có dữ liệu không
-            "country_mapping": "SELECT COUNT(1) FROM country_mapping;",
-            "dim_browser": "SELECT COUNT(1) FROM dim_browser;",
-            "dim_os": "SELECT COUNT(1) FROM dim_os;",
-            "dim_country": "SELECT COUNT(1) FROM dim_country;",
             # Bảng Fact: Kiểm tra dữ liệu theo ngày thực thi của Airflow
-            "fact_product_views": "SELECT COUNT(1) FROM fact_product_views WHERE date <= '{{ ds }}';"
+            "fact_product_views": "SELECT COUNT(1) FROM fact_product_views WHERE date = '{{ ds }}';",
+
+            # Các bảng Dim: Lọc dữ liệu có trong bảng fact mà ko có trong bảng dim vào CTE, count nếu = 0 (không tồn tại) thì trả về 1 (Pass)
+            # Bảng dim_browser
+            "dim_browser": """
+                WITH fault_data AS (
+                    SELECT 1 
+                    FROM fact_product_views f
+                    LEFT JOIN dim_browser d ON f.browser_id = d.id
+                    WHERE f.date = '{{ ds }}' AND (d.id IS NULL OR f.browser_id IS NULL)
+                )
+                SELECT CASE WHEN COUNT(1) = 0 THEN 1 ELSE 0 END FROM fault_data;""",
+            # Bảng dim_os
+            "dim_os": """
+                WITH fault_data AS (
+                    SELECT 1 
+                    FROM fact_product_views f
+                    LEFT JOIN dim_os d ON f.os_id = d.id
+                    WHERE f.date = '{{ ds }}' AND (d.id IS NULL OR f.os_id IS NULL)
+                )
+                SELECT CASE WHEN COUNT(1) = 0 THEN 1 ELSE 0 END FROM fault_data;""",
+            # Bảng dim_country
+            "dim_country": """
+                WITH fault_data AS (
+                    SELECT 1 
+                    FROM fact_product_views f
+                    LEFT JOIN dim_country d ON f.country_id = d.id
+                    WHERE f.date = '{{ ds }}' AND (d.id IS NULL OR f.country_id IS NULL)
+                )
+                SELECT CASE WHEN COUNT(1) = 0 THEN 1 ELSE 0 END FROM fault_data;"""
         }
     )
 
